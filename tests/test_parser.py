@@ -35,8 +35,28 @@ def test_operator_keyword_without_colon_is_a_term():
     assert parse("author").terms == ["author"]
 
 
-def test_unknown_operator_is_a_term():
-    assert parse("foo:bar").terms == ["foo:bar"]
+def test_unknown_operator_is_an_error():
+    with pytest.raises(SearchSyntaxError, match="unknown search operator 'foo'"):
+        parse("foo:bar")
+
+
+def test_unknown_operator_with_quoted_value_is_an_error():
+    with pytest.raises(SearchSyntaxError, match="unknown search operator 'foo'"):
+        parse('foo:"bar baz"')
+
+
+def test_quoted_colon_term():
+    q = parse('"foo:bar" "created_before:2026-11-04"')
+    assert q.terms == ["foo:bar", "created_before:2026-11-04"]
+    assert q.filters == []
+
+
+def test_operator_value_may_contain_colon():
+    assert parse("author:a:b").filters == [Filter("author", "a:b")]
+
+
+def test_colon_not_after_identifier_is_a_term():
+    assert parse("12:30 :foo").terms == ["12:30", ":foo"]
 
 
 def test_bad_date():

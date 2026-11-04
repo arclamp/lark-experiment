@@ -28,8 +28,8 @@ class SearchSyntaxError(ValueError):
     """Raised for input that doesn't parse, or has an invalid operator value."""
 
 
-# How to interpret each operator's raw string value. Adding an operator means
-# adding it to OPERATOR in search.lark *and* here.
+# The valid operators, and how to interpret each one's raw string value.
+# Adding an operator only requires adding an entry here.
 VALUE_CONVERTERS: dict[str, Callable[[str], Any]] = {
     "created_before": date.fromisoformat,
     "created_after": date.fromisoformat,
@@ -58,6 +58,12 @@ class SearchTransformer(Transformer):
     def operator(self, op: Token, value: Token) -> Filter:
         name = op[:-1]  # strip trailing colon
         raw = _unquote(value)
+        if name not in VALUE_CONVERTERS:
+            known = ", ".join(sorted(VALUE_CONVERTERS))
+            raise SearchSyntaxError(
+                f"unknown search operator {name!r} (valid operators: {known}). "
+                f'To search for text containing a colon, put it in double quotes, e.g. "{op}{raw}"'
+            )
         try:
             converted = VALUE_CONVERTERS[name](raw)
         except ValueError as e:
