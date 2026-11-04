@@ -82,7 +82,10 @@ _parser = Lark(
 
 def parse_tree(text: str):
     """Return the raw lark parse tree (handy for learning/debugging)."""
-    return _parser.parse(text)
+    try:
+        return _parser.parse(text)
+    except UnexpectedInput as e:
+        raise SearchSyntaxError(str(e)) from e
 
 
 def parse(text: str) -> SearchQuery:
