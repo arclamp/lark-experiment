@@ -1,0 +1,40 @@
+// Grammar for search strings like:
+//     cats "big dogs" created_before:2026-11-04 author:"Jane Doe"
+//
+// Conventions in lark:
+//   - lowercase names are *rules*; each produces a node in the parse tree
+//   - UPPERCASE names are *terminals* (tokens), matched by the lexer
+//   - a rule name starting with "_" is inlined: its children are spliced
+//     into the parent instead of creating a node of its own
+
+start: _clause*
+
+_clause: operator
+       | term
+
+// An operator is a known keyword+colon, followed by exactly one value.
+operator: OPERATOR value
+
+?value: WORD
+      | ESCAPED_STRING
+
+// Anything that is not an operator is a plain search term.
+term: WORD
+    | ESCAPED_STRING
+
+// Anything shaped like an operator: an identifier immediately followed by a
+// colon. Whether the name is a *known* operator is checked later, in the
+// Transformer, so the list of valid operators lives in one place (Python).
+// Priority 2 makes the lexer try this before WORD, which would otherwise
+// also match "created_before:2026-11-04" in its entirety.
+//
+// To search for literal text containing a colon, quote it: "foo:bar" lexes
+// as a single ESCAPED_STRING token, so it is never seen as an operator.
+OPERATOR.2: /[A-Za-z_][A-Za-z0-9_]*:/
+
+// A bare word: any run of non-whitespace, non-quote characters.
+WORD: /[^\s"]+/
+
+%import common.ESCAPED_STRING
+%import common.WS
+%ignore WS
